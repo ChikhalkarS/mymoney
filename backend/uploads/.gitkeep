@@ -1,0 +1,2 @@
+# This directory stores processed transaction JSON files.
+# Individual .json files are excluded via .gitignore.
