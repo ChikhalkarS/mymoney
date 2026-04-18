@@ -12,6 +12,7 @@ build/
 
 # Uploaded data files (user data – never commit)
 backend/uploads/*.json
+backend/app/uploads/
 
 # Node.js
 frontend/node_modules/

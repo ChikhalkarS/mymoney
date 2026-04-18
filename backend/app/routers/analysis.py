@@ -4,7 +4,7 @@ Analysis router: returns categorised summaries and financial advice.
 
 from __future__ import annotations
 
-import json
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -23,9 +23,19 @@ UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
 
 router = APIRouter(prefix="/api", tags=["analysis"])
 
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
+
 
 def _load_df(file_id: str) -> pd.DataFrame:
-    path = UPLOADS_DIR / f"{file_id}.json"
+    if not _UUID_RE.match(file_id):
+        raise HTTPException(status_code=400, detail="Invalid file_id format.")
+    # Resolve the path and verify it stays within UPLOADS_DIR
+    path = (UPLOADS_DIR / f"{file_id}.json").resolve()
+    if not str(path).startswith(str(UPLOADS_DIR.resolve())):
+        raise HTTPException(status_code=400, detail="Invalid file_id.")
     if not path.exists():
         raise HTTPException(
             status_code=404,
