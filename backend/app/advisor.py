@@ -49,7 +49,7 @@ def _rule_based_advice(category_totals: dict[str, float]) -> str:
         pct = spent / total_spending if total_spending else 0
         limit_amount = limit_pct * total_spending
 
-        if spent > limit_amount * 1.10:  # 10 % tolerance
+        if spent > limit_amount * 1.10:  # 10% tolerance
             lines.append(
                 f"⚠️  **{category}**: You spent **${spent:,.2f}** "
                 f"({pct:.1%} of budget), which exceeds the recommended "

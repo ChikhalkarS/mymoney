@@ -34,7 +34,7 @@ def _load_df(file_id: str) -> pd.DataFrame:
     # Build path from the canonical UUID string and confirm it stays in UPLOADS_DIR
     path = (UPLOADS_DIR / f"{safe_id}.json").resolve()
     uploads_root = UPLOADS_DIR.resolve()
-    if not str(path).startswith(str(uploads_root) + "/"):
+    if not path.is_relative_to(uploads_root):
         raise HTTPException(status_code=400, detail="Invalid file_id.")
     if not path.exists():
         raise HTTPException(
