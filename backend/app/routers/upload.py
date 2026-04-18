@@ -102,12 +102,12 @@ def _parse_pdf(content: bytes) -> pd.DataFrame:
                 line = line.strip()
                 date_m = date_re.match(line)
                 amount_m = amount_re.search(line)
-                if date_m and amount_m:
+                if date_m and amount_m and date_m.end() < amount_m.start():
                     date_str = date_m.group(1)
                     amount_str = amount_m.group(1).replace("$", "").replace(",", "")
                     description = line[date_m.end(): amount_m.start()].strip()
                     records.append(
-                        {"date": date_str, "description": description, "amount": amount_str}
+                        {"date": date_str, "description": description or "—", "amount": amount_str}
                     )
 
         if not records:
