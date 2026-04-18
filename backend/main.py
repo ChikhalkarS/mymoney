@@ -2,6 +2,8 @@
 MyMoney FastAPI application entry point.
 """
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -14,15 +16,19 @@ app = FastAPI(
 )
 
 # ---------------------------------------------------------------------------
-# CORS – allow the Next.js dev server and any local origins
+# CORS – configurable via ALLOWED_ORIGINS env var (comma-separated).
+# Defaults to "*" so any frontend origin can reach the public API.
 # ---------------------------------------------------------------------------
+_raw_origins = os.environ.get("ALLOWED_ORIGINS", "*")
+if _raw_origins == "*":
+    allow_origins = ["*"]
+else:
+    allow_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
-    allow_credentials=True,
+    allow_origins=allow_origins,
+    allow_credentials=allow_origins != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )

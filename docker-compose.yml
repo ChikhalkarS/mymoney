@@ -1,0 +1,110 @@
+version: "3.9"
+
+# ---------------------------------------------------------------------------
+# MyMoney – Docker Compose
+#
+# Services:
+#   ollama   – Local LLM server (pulls llama3 on first run)
+#   backend  – FastAPI + Pandas (port 8000)
+#   frontend – Next.js (port 3000)
+#
+# Quick start:
+#   docker compose up --build
+#
+# The app will be available at http://localhost:3000
+# The backend API docs will be available at http://localhost:8000/docs
+#
+# For a public / remote deployment set the NEXT_PUBLIC_API_URL build-arg
+# (or rebuild with --build-arg NEXT_PUBLIC_API_URL=https://yourapi.example.com).
+# ---------------------------------------------------------------------------
+
+services:
+  # --------------------------------------------------------------------------
+  # Ollama – local AI model server
+  # --------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    container_name: mymoney-ollama
+    restart: unless-stopped
+    # Pull llama3 on start-up (skips if already cached in the named volume)
+    entrypoint: >
+      /bin/sh -c "
+        /bin/ollama serve &
+        SERVER_PID=$$!;
+        echo 'Waiting for Ollama to be ready...';
+        until wget -qO- http://localhost:11434/api/tags > /dev/null 2>&1; do
+          sleep 2;
+        done;
+        echo 'Pulling llama3 model (this may take a few minutes on first run)...';
+        /bin/ollama pull llama3;
+        echo 'Ollama is ready.';
+        wait $$SERVER_PID
+      "
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:11434/api/tags || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # --------------------------------------------------------------------------
+  # Backend – FastAPI
+  # --------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mymoney-backend
+    restart: unless-stopped
+    environment:
+      # Point to the ollama Docker service
+      OLLAMA_URL: http://ollama:11434/api/generate
+      OLLAMA_MODEL: llama3
+      # Allow all origins so the frontend (and any public client) can reach the API.
+      # Override with a comma-separated list to restrict access, e.g.:
+      #   ALLOWED_ORIGINS: "http://localhost:3000,https://mymoney.example.com"
+      ALLOWED_ORIGINS: "*"
+    volumes:
+      - uploads_data:/app/uploads
+    ports:
+      - "8000:8000"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # --------------------------------------------------------------------------
+  # Frontend – Next.js
+  # --------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Server-side URL used by Next.js rewrites to proxy /api/* to backend.
+        # The browser always calls the frontend host; no CORS issues.
+        BACKEND_URL: http://backend:8000
+    container_name: mymoney-frontend
+    restart: unless-stopped
+    environment:
+      # Empty → all API calls use relative paths (/api/...) proxied by Next.js
+      NEXT_PUBLIC_API_URL: ""
+      BACKEND_URL: http://backend:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  ollama_data:
+  uploads_data:

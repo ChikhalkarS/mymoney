@@ -8,9 +8,9 @@ export default function HomePage() {
           MyMoney
         </h1>
         <p className="text-xl text-slate-400 max-w-2xl">
-          Your zero-cost personal finance tracker. Upload a bank statement CSV or
-          Excel file and instantly visualise where your money goes — powered by
-          AI-driven insights.
+          Your zero-cost personal finance tracker. Upload a bank statement CSV,
+          Excel, or PDF file and instantly visualise where your money goes —
+          powered by AI-driven insights.
         </p>
       </div>
 
@@ -19,7 +19,7 @@ export default function HomePage() {
           <div className="text-3xl mb-3">📂</div>
           <h2 className="font-semibold text-lg mb-1">Upload</h2>
           <p className="text-slate-400 text-sm">
-            Import CSV or Excel bank statements in seconds.
+            Import CSV, Excel, or PDF bank statements in seconds.
           </p>
         </div>
         <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
