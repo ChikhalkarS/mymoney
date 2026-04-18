@@ -4,7 +4,7 @@ Analysis router: returns categorised summaries and financial advice.
 
 from __future__ import annotations
 
-import re
+import uuid as uuid_module
 from pathlib import Path
 
 import pandas as pd
@@ -23,23 +23,23 @@ UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
 
 router = APIRouter(prefix="/api", tags=["analysis"])
 
-_UUID_RE = re.compile(
-    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-    re.IGNORECASE,
-)
-
 
 def _load_df(file_id: str) -> pd.DataFrame:
-    if not _UUID_RE.match(file_id):
+    # Parse file_id as a UUID to validate format and produce a canonical,
+    # user-input-independent string – prevents path traversal.
+    try:
+        safe_id = str(uuid_module.UUID(file_id))
+    except (ValueError, AttributeError):
         raise HTTPException(status_code=400, detail="Invalid file_id format.")
-    # Resolve the path and verify it stays within UPLOADS_DIR
-    path = (UPLOADS_DIR / f"{file_id}.json").resolve()
-    if not str(path).startswith(str(UPLOADS_DIR.resolve())):
+    # Build path from the canonical UUID string and confirm it stays in UPLOADS_DIR
+    path = (UPLOADS_DIR / f"{safe_id}.json").resolve()
+    uploads_root = UPLOADS_DIR.resolve()
+    if not str(path).startswith(str(uploads_root) + "/"):
         raise HTTPException(status_code=400, detail="Invalid file_id.")
     if not path.exists():
         raise HTTPException(
             status_code=404,
-            detail=f"No data found for file_id '{file_id}'. Upload a file first.",
+            detail=f"No data found for file_id '{safe_id}'. Upload a file first.",
         )
     df = pd.read_json(path, orient="records")
     df["date"] = pd.to_datetime(df["date"])
