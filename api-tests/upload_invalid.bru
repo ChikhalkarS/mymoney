@@ -1,0 +1,21 @@
+meta {
+  name: Upload Invalid File
+  type: http
+  seq: 4
+}
+
+post {
+  url: http://localhost:8000/api/upload
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  file: @file(/path/to/invalid.txt)
+}
+
+tests {
+  test("Returns 422 for invalid file", function() {
+    expect(res.getStatus()).to.equal(422);
+  });
+}

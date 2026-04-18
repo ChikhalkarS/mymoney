@@ -1,0 +1,17 @@
+meta {
+  name: Get Analysis - Not Found
+  type: http
+  seq: 5
+}
+
+get {
+  url: http://localhost:8000/api/analysis/nonexistent-file-id
+  body: none
+  auth: none
+}
+
+tests {
+  test("Returns 404 for unknown file_id", function() {
+    expect(res.getStatus()).to.equal(404);
+  });
+}

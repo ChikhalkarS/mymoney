@@ -1,0 +1,53 @@
+meta {
+  name: Get Analysis
+  type: http
+  seq: 3
+}
+
+get {
+  url: http://localhost:8000/api/analysis/{{file_id}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Returns categories array", function() {
+    var data = res.getBody();
+    expect(data.categories).to.be.an("array");
+    expect(data.categories.length).to.be.greaterThan(0);
+  });
+
+  test("Returns monthly breakdown", function() {
+    var data = res.getBody();
+    expect(data.monthly).to.be.an("array");
+  });
+
+  test("Returns daily cash flow", function() {
+    var data = res.getBody();
+    expect(data.daily).to.be.an("array");
+  });
+
+  test("Returns transactions list", function() {
+    var data = res.getBody();
+    expect(data.transactions).to.be.an("array");
+    expect(data.transactions.length).to.be.greaterThan(0);
+  });
+
+  test("Returns advice string", function() {
+    var data = res.getBody();
+    expect(data.advice).to.be.a("string");
+    expect(data.advice.length).to.be.greaterThan(0);
+  });
+
+  test("Category has required fields", function() {
+    var data = res.getBody();
+    var cat = data.categories[0];
+    expect(cat).to.have.property("category");
+    expect(cat).to.have.property("total");
+    expect(cat).to.have.property("percentage");
+  });
+}
