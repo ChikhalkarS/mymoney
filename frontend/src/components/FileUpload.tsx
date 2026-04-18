@@ -18,12 +18,13 @@ export default function FileUpload() {
     "text/csv",
     "application/vnd.ms-excel",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/pdf",
   ];
 
   const handleFile = (f: File) => {
     setError(null);
-    if (!acceptedTypes.includes(f.type) && !f.name.match(/\.(csv|xls|xlsx)$/i)) {
-      setError("Only CSV (.csv) and Excel (.xls / .xlsx) files are supported.");
+    if (!acceptedTypes.includes(f.type) && !f.name.match(/\.(csv|xls|xlsx|pdf)$/i)) {
+      setError("Only CSV (.csv), Excel (.xls / .xlsx), and PDF (.pdf) files are supported.");
       return;
     }
     setFile(f);
@@ -85,7 +86,7 @@ export default function FileUpload() {
         <input
           ref={inputRef}
           type="file"
-          accept=".csv,.xls,.xlsx"
+          accept=".csv,.xls,.xlsx,.pdf"
           className="hidden"
           onChange={onInputChange}
         />
@@ -98,7 +99,7 @@ export default function FileUpload() {
               Drag &amp; drop your bank statement here
             </p>
             <p className="text-slate-500 text-sm mt-1">
-              or click to browse &mdash; CSV, XLS, XLSX
+              or click to browse &mdash; CSV, XLS, XLSX, PDF
             </p>
           </>
         )}
@@ -119,9 +120,9 @@ export default function FileUpload() {
       </button>
 
       <div className="text-slate-500 text-xs text-center">
-        <p className="font-medium text-slate-400 mb-1">Expected CSV columns:</p>
+        <p className="font-medium text-slate-400 mb-1">Expected CSV / Excel columns:</p>
         <code className="bg-slate-800 px-2 py-1 rounded">date, description, amount</code>
-        <p className="mt-1">All data is processed locally — nothing leaves your machine.</p>
+        <p className="mt-1">PDF bank statements are also supported. All data is processed locally.</p>
       </div>
     </div>
   );

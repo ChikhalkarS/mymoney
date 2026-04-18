@@ -6,7 +6,7 @@ export default function UploadPage() {
       <div className="text-center">
         <h1 className="text-3xl font-bold text-emerald-400 mb-2">Upload Bank Statement</h1>
         <p className="text-slate-400">
-          Upload a CSV or Excel file exported from your bank to get started.
+          Upload a CSV, Excel, or PDF file exported from your bank to get started.
         </p>
       </div>
       <FileUpload />

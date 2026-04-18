@@ -7,11 +7,15 @@ Financial advisor module.
 
 from __future__ import annotations
 
+import os
+
 import httpx
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "llama3"
-OLLAMA_TIMEOUT = 15  # seconds
+# In Docker Compose, OLLAMA_URL points to the ollama service.
+# Default falls back to localhost for local development.
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434/api/generate")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3")
+OLLAMA_TIMEOUT = 30  # seconds – slightly longer to account for Docker cold-start
 
 # 50/30/20 budget guidelines (as a fraction of total spending)
 BUDGET_GUIDELINES: dict[str, float] = {

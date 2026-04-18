@@ -8,13 +8,14 @@ A **zero-cost**, open-source personal finance web application that lets you uplo
 
 | Feature | Description |
 |---|---|
-| 📂 **CSV / Excel Upload** | Drag-and-drop or click-to-browse bank statement import |
+| 📂 **CSV / Excel / PDF Upload** | Drag-and-drop or click-to-browse bank statement import |
 | 🏷️ **Auto-Categorisation** | Keyword-based merchant matching: Groceries, Dining, Transport, etc. |
 | 📊 **Pie / Donut Chart** | Spending breakdown by category |
 | 📈 **Bar Chart** | Month-over-month spending comparison |
 | 📉 **Line Graph** | Daily cash-flow time-series with average reference line |
 | 🤖 **AI Advisor** | Ollama (local LLM) integration for personalised tips |
 | 📋 **Rule-Based Fallback** | 50/30/20 budget rule analysis when Ollama is unavailable |
+| 🐳 **Docker Compose** | One-command deployment with Ollama, backend, and frontend |
 | 🧪 **Bruno API Tests** | Ready-to-run `.bru` collection for all endpoints |
 
 ---
@@ -23,8 +24,11 @@ A **zero-cost**, open-source personal finance web application that lets you uplo
 
 ```
 mymoney/
+├── docker-compose.yml              # One-command Docker deployment
+├── .env.example                    # Environment variable reference
 ├── README.md
 ├── frontend/                   # Next.js 14 (App Router) + Tailwind + Recharts
+│   ├── Dockerfile
 │   ├── package.json
 │   ├── next.config.js
 │   ├── tailwind.config.js
@@ -46,6 +50,7 @@ mymoney/
 │           ├── MonthlyBarChart.tsx
 │           └── DailyLineChart.tsx
 ├── backend/                    # FastAPI + Pandas
+│   ├── Dockerfile
 │   ├── requirements.txt
 │   ├── main.py                 # App entry point & CORS
 │   ├── uploads/                # Processed JSON files (auto-created)
@@ -68,7 +73,70 @@ mymoney/
 
 ---
 
-## 🛠️ Prerequisites
+## 🐳 Docker Compose (Recommended)
+
+The easiest way to run MyMoney. A single command builds and starts all three services:
+
+- **Ollama** – local AI model server (automatically downloads `llama3` on first run)
+- **Backend** – FastAPI data processing API
+- **Frontend** – Next.js web application
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine + Compose plugin)
+
+### Start
+
+```bash
+git clone https://github.com/ChikhalkarS/mymoney.git
+cd mymoney
+docker compose up --build
+```
+
+> ⚠️ The **first run** downloads the `llama3` model (~4 GB). Subsequent starts are fast.
+
+Once all services are healthy, open **http://localhost:3000** in your browser.
+
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:8000 |
+| API Docs | http://localhost:8000/docs |
+| Ollama | http://localhost:11434 |
+
+### Stop
+
+```bash
+docker compose down
+```
+
+### Using a Different Ollama Model
+
+Edit the `OLLAMA_MODEL` environment variable in `docker-compose.yml`:
+
+```yaml
+environment:
+  OLLAMA_MODEL: mistral   # or llama3:8b, gemma, phi3, etc.
+```
+
+Then rebuild: `docker compose up --build`.
+
+### Public Deployment
+
+To host the app at a public URL, the Next.js server proxies all `/api/*` requests to the backend internally – no extra configuration needed. Simply ensure ports `3000` and `8000` (or your reverse proxy) are accessible.
+
+To restrict CORS to specific origins, set `ALLOWED_ORIGINS` in the backend service:
+
+```yaml
+environment:
+  ALLOWED_ORIGINS: "https://mymoney.example.com"
+```
+
+---
+
+## 🛠️ Local Development (without Docker)
+
+### Prerequisites
 
 | Tool | Version | Install |
 |---|---|---|
@@ -76,10 +144,6 @@ mymoney/
 | **Python** | ≥ 3.11 | [python.org](https://python.org) |
 | **Ollama** *(optional)* | Latest | [ollama.com](https://ollama.com) |
 | **Bruno** *(optional)* | Latest | [usebruno.com](https://usebruno.com) |
-
----
-
-## 🚀 Setup & Running Locally
 
 ### 1. Clone the repository
 
@@ -146,7 +210,9 @@ ollama serve
 
 ---
 
-## 📄 CSV / Excel Data Format
+## 📄 CSV / Excel / PDF Data Format
+
+### CSV and Excel
 
 Your bank statement file must contain **at least these three columns** (column names are case-insensitive and several common aliases are accepted):
 
@@ -155,6 +221,15 @@ Your bank statement file must contain **at least these three columns** (column n
 | `date` | `transaction date`, `trans date`, `posting date`, `value date` | Transaction date |
 | `description` | `merchant`, `details`, `narration`, `memo`, `transaction description`, `particulars` | Merchant name or transaction description |
 | `amount` | `debit`, `credit`, `transaction amount`, `value` | Transaction amount (positive = expense, negative = income/credit) |
+
+### PDF
+
+PDF bank statements are supported via automatic table detection. The parser:
+
+1. Extracts all tables from the PDF and picks the one that matches the expected columns.
+2. Falls back to line-by-line text heuristics for PDFs without embedded tables.
+
+Most bank-exported PDFs work out of the box. If extraction fails, try exporting to CSV or Excel instead.
 
 ### Example CSV
 
@@ -173,6 +248,7 @@ A sample file is provided at `api-tests/sample_bank_statement.csv`.
 
 - **CSV** (`.csv`) – comma-separated
 - **Excel** (`.xlsx`, `.xls`) – standard spreadsheet
+- **PDF** (`.pdf`) – bank statement PDF with tables or text
 
 ---
 
@@ -222,7 +298,7 @@ Health check.
 ---
 
 ### `POST /api/upload`
-Upload a CSV or Excel bank statement.
+Upload a CSV, Excel, or PDF bank statement.
 
 **Request:** `multipart/form-data` with field `file`.
 
@@ -275,19 +351,20 @@ Retrieve spending analysis for a previously uploaded file.
 The advisor module (`backend/app/advisor.py`) tries to call a **local Ollama instance** first:
 
 ```
-POST http://localhost:11434/api/generate
+POST http://ollama:11434/api/generate   (Docker)
+POST http://localhost:11434/api/generate (local dev)
 { "model": "llama3", "prompt": "...", "stream": false }
 ```
 
 If Ollama is unreachable (timeout or connection error), it automatically falls back to the **rule-based 50/30/20 analyser**, which compares each spending category against recommended budget percentages and flags any overages.
 
-To change the Ollama model, edit `OLLAMA_MODEL` in `backend/app/advisor.py`.
+To change the Ollama model, set the `OLLAMA_MODEL` environment variable (or edit `backend/app/advisor.py`).
 
 ---
 
 ## 🔒 Privacy
 
-All data is processed **locally on your machine**. No transaction data is sent to any external server. Ollama runs the AI model locally too — your financial data never leaves your device.
+All data is processed **on your own infrastructure**. When using Docker Compose, no transaction data is sent to any external server. Ollama runs the AI model locally too — your financial data never leaves your deployment.
 
 ---
 
@@ -301,7 +378,9 @@ All data is processed **locally on your machine**. No transaction data is sent t
 | Backend | FastAPI, Python 3.11+ |
 | Data Processing | Pandas |
 | Excel Support | openpyxl |
+| PDF Support | pdfplumber |
 | AI Advisor | Ollama (local LLM) |
+| Containerisation | Docker & Docker Compose |
 | API Testing | Bruno |
 
 ---
@@ -309,3 +388,4 @@ All data is processed **locally on your machine**. No transaction data is sent t
 ## 📝 License
 
 MIT — free for personal and commercial use.
+
